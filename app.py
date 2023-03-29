@@ -16,6 +16,7 @@ def before_request():
 @app.teardown_request
 def after_request(exception):
     if g.conn is not None:
+        g.conn = None
         print("Desconectando ao banco")
 
 
@@ -72,7 +73,7 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
     match request.method:
         case 'POST':            #interpreta entradas e altera/exibe o banco de dados como uma saída json
             filter = "WHERE("   #inicializa a variável filter
-            query = ""          #inicializa a query
+            query = "SELECT * FROM tec"          #inicializa a query
             if session['username'] is None: #caso o usuário não esteja logado
                 return redirect(url_for("login"))
             print("codigo:", request.form['code'])
@@ -95,37 +96,46 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
                 case "list":    #apenas mostra a tabela de acordo com a solicitação
                     query = f" SELECT * FROM tec {filter}" 
                 case "remove":  #decrementa a quantidade de um item selecionado via id
-                    cursor = g.conn.cursor()
-                    quantidade = cursor.execute(f"SELECT quantity FROM tec WHERE id = {request.form['code']}")
-                    if quantidade.fetchone()[0] < int(request.form['quantity']):
-                        return redirect("index")
-                    query = f"UPDATE tec SET quantity = quantity - {request.form['quantity']} WHERE id = {request.form['code']}"
-                    altering(query,session,request.form)
-                    query = "SELECT * FROM tec"
+                    if filter:
+                        cursor = g.conn.cursor()
+                        quantidade = cursor.execute(f"SELECT quantity FROM tec WHERE id = {request.form['code']}")
+                        if quantidade.fetchone()[0] < int(request.form['quantity']):
+                            return redirect("index")
+                        query = f"UPDATE tec SET quantity = quantity - {request.form['quantity']} WHERE id = {request.form['code']}"
+                        altering(query,session,request.form)
+                        query = "SELECT * FROM tec"
                 case "add":     #incrementa a quantidade de um item selecionado via id
-                    query = f"UPDATE tec SET quantity = quantity + {request.form['quantity']} WHERE id = {request.form['code']}"
-                    altering(query,session,request.form)
-                    query = "SELECT * FROM tec"
-                    print(request.form)
+                    print("filter:", filter)
+                    if filter:
+                        print(filter)
+                        query = f"UPDATE tec SET quantity = quantity + {request.form['quantity']} WHERE id = {request.form['code']}"
+                        altering(query,session,request.form)
+                        query = "SELECT * FROM tec"
+                        print(request.form)
                 case "new":     #adiciona um novo item à db, é necessário que sejam passados todos os parâmetros
-                    for value in request.form:
-                        if request.form[value] == "" and value != 'code':
-                            return redirect(url_for("index"))
-                    values = f"""'{request.form["damage"]}', '{request.form["name"]}', '{request.form["quantity"]}', '{request.form["value"]}'"""
-                    query = f"INSERT INTO tec(damage,name,quantity,value) VALUES({values})"
-                    altering(query,session,request.form)
-                    query = "SELECT * FROM tec"
+                    if filter:
+                        print("entrou")
+                        for value in request.form:
+                            if request.form[value] == "" and value != 'code':
+                                return redirect(url_for("index"))
+                        values = f"""'{request.form["damage"]}', '{request.form["name"]}', '{request.form["quantity"]}', '{request.form["value"]}'"""
+                        query = f"INSERT INTO tec(damage,name,quantity,value) VALUES({values})"
+                        altering(query,session,request.form)
+                        query = "SELECT * FROM tec"
                 case "change":  #altera os valores de um item da tabela(somente altera os atributos que o usuário preencheu os campos)
-                    columns = ""
-                    for value in request.form:
-                        if value == 'code' and request.form[value] == "":
-                            return redirect(url_for("index"))
-                        if request.form[value] != "" and value != 'code' and value != 'type':
-                            columns += f"{value} = '{request.form[value]}', "
-                    columns = columns[:-2]
-                    query = f"UPDATE tec SET {columns} WHERE id = {request.form['code']}"
-                    altering(query,session,request.form)
-                    query = query = "SELECT * FROM tec"
+                    if filter:
+                        columns = ""
+                        for value in request.form:
+                            if value == 'code' and request.form[value] == "":
+                                return redirect(url_for("index"))
+                            if request.form[value] != "" and value != 'code' and value != 'type':
+                                columns += f"{value} = '{request.form[value]}', "
+                        columns = columns[:-2]
+                        query = f"UPDATE tec SET {columns} WHERE id = {request.form['code']}"
+                        altering(query,session,request.form)
+                        query = query = "SELECT * FROM tec"
+            if filter == "WHERE(":
+                return redirect(url_for("index"))
             return query_table_to_dict(query) #retorna o json
         case 'GET':             #redireciona para o login
             if not session.get('username'): 
