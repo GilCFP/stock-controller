@@ -1,10 +1,12 @@
 from flask import Flask, request, Response, g, session, render_template, redirect, url_for
 from flask_bcrypt import Bcrypt
 import sqlite3
+
 app = Flask(__name__)
 app.secret_key = '1902oskdhjays%@#'
 bcrypt = Bcrypt(app)
 DB_URL = "estoque.db"
+app.jinja_env.globals.update(len=len, list = list)
 
 @app.before_request
 def before_request():
@@ -23,7 +25,7 @@ def after_request(exception):
 def query_table_to_dict(query):#retorna a tabela sql selecionada em json(suporta apenas a tabela tec)
     cursor = g.conn.cursor()
     cursor = cursor.execute(query)
-    stock_dict = [{'id': row[0], 'name': row[1], 'quantity':row[2], 'value':row[3], 'damage': row[4]}
+    stock_dict = [{'id': row[0], 'serial': row[1], 'modelo':row[2], 'quantidade':row[3], 'defeito':row[4]}
                       for row in cursor.fetchall()]
     return stock_dict
 
@@ -35,8 +37,10 @@ def log_user(session_data): #salva as credencias do usuário na variável sessio
 def altering(query,session,form): #altera a tabela tec conforme a query fornecida e registra no histórico a alteração    
     cursor = g.conn.cursor()
     cursor.execute(query)
-    history = """INSERT INTO history (user_id, type, quantity, item_id) VALUES(?,?,?,?)"""
-    cursor.execute(history,(session['user_id'], form['type'], form['quantity'], form['code']))
+    print(query)
+    history = """INSERT INTO history (user_id, type, quantity, item_id) VALUES(?,?,?,?);"""
+    cursor.execute(history,(session['user_id'], form['type'], form['quantidade'], form['code']))
+    cursor.execute("DELETE FROM tec WHERE quantidade = 0;")
     g.conn.commit()
 
     
@@ -77,16 +81,16 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
             if session['username'] is None: #caso o usuário não esteja logado
                 return redirect(url_for("login"))
             print("codigo:", request.form['code'])
-            if len(request.form['name']):       #integralizando os parametros do usuário no filtro
-                filter = filter + f" name LIKE '%{request.form['name']}%' AND"
+            if len(request.form['modelo']):       #integralizando os parametros do usuário no filtro
+                filter = filter + f" modelo LIKE '%{request.form['modelo']}%' AND"
             if len(request.form['code']):       #integralizando os parametros do usuário no filtro
                 filter = filter + f" id = {request.form['code']} AND"
-            if len(request.form['quantity']):   #integralizando os parametros do usuário no filtro
-                filter = filter + f" quantity = {request.form['quantity']} AND"
-            if len(request.form['damage']):     #integralizando os parametros do usuário no filtro
-                filter = filter + f" damage LIKE '%{request.form['damage']}%' AND"
-            if len(request.form['value']):      #integralizando os parametros do usuário no filtro
-                filter = filter + f" value = {request.form['value']} AND"
+            if len(request.form['quantidade']):   #integralizando os parametros do usuário no filtro
+                filter = filter + f" quantidade = {request.form['quantidade']} AND"
+            if len(request.form['defeito']):     #integralizando os parametros do usuário no filtro
+                filter = filter + f" defeito LIKE '%{request.form['defeito']}%' AND"
+            if len(request.form['serial']):     #integralizando os parametros do usuário no filtro
+                filter = filter + f" serial LIKE '%{request.form['serial']}%' AND"
             filter = filter[:-3]    #removendo o "AND" no final da string
             if len(filter) == 3:    #caso o usuário não tenha colocado nenhum parâmetro de entrada "desabilita" o filtro
                 filter = ""
@@ -94,32 +98,43 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
                 filter = filter + ")"   #caso tenha parâmetros, é adicionado um parênteses ao final para que funcione corretamente no sql
             match request.form['type']: #considera os variadas opções do usuário
                 case "list":    #apenas mostra a tabela de acordo com a solicitação
+                    # print(query_creator("list",request.form))
                     query = f" SELECT * FROM tec {filter}" 
                 case "remove":  #decrementa a quantidade de um item selecionado via id
                     if filter:
                         cursor = g.conn.cursor()
-                        quantidade = cursor.execute(f"SELECT quantity FROM tec WHERE id = {request.form['code']}")
-                        if quantidade.fetchone()[0] < int(request.form['quantity']):
+                        quantidade = cursor.execute(f"SELECT quantidade FROM tec WHERE serial = '{request.form['serial']}'")
+                        if quantidade.fetchone()[0] < int(request.form['quantidade']):
                             return redirect("index")
-                        query = f"UPDATE tec SET quantity = quantity - {request.form['quantity']} WHERE id = {request.form['code']}"
+                        query = f"UPDATE tec SET quantidade = quantidade - {request.form['quantidade']} WHERE serial = '{request.form['serial']}'"
                         altering(query,session,request.form)
                         query = "SELECT * FROM tec"
                 case "add":     #incrementa a quantidade de um item selecionado via id
-                    print("filter:", filter)
                     if filter:
                         print(filter)
-                        query = f"UPDATE tec SET quantity = quantity + {request.form['quantity']} WHERE id = {request.form['code']}"
+                        cursor = g.conn.cursor()
+                        query = f"UPDATE tec SET quantidade = quantidade + {request.form['quantidade']} WHERE serial = {request.form['serial']}"
                         altering(query,session,request.form)
                         query = "SELECT * FROM tec"
                         print(request.form)
                 case "new":     #adiciona um novo item à db, é necessário que sejam passados todos os parâmetros
                     if filter:
-                        print("entrou")
+                        cursor = g.conn.cursor()
+                        if cursor.execute("SELECT * FROM tec WHERE serial = ?",(request.form['serial'],)).fetchone():#caso ja tenha algo registrado com esse id
+                            return redirect(url_for("index"))
+                        values = ""
+                        query = "INSERT INTO tec("
                         for value in request.form:
-                            if request.form[value] == "" and value != 'code':
+                            if request.form[value] == "" and value not in ['code','defeito']:
                                 return redirect(url_for("index"))
-                        values = f"""'{request.form["damage"]}', '{request.form["name"]}', '{request.form["quantity"]}', '{request.form["value"]}'"""
-                        query = f"INSERT INTO tec(damage,name,quantity,value) VALUES({values})"
+                            
+                            if value not in ["type","code"] and request.form[value]:
+                                values+=f"'{request.form[value]}',"
+                                query += f"{value},"
+                        values = values[:-1]
+                        query = query[:-1] + f") VALUES({values})"
+                        print("values:",values)
+                        print("query:",query)
                         altering(query,session,request.form)
                         query = "SELECT * FROM tec"
                 case "change":  #altera os valores de um item da tabela(somente altera os atributos que o usuário preencheu os campos)
@@ -128,7 +143,7 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
                         for value in request.form:
                             if value == 'code' and request.form[value] == "":
                                 return redirect(url_for("index"))
-                            if request.form[value] != "" and value != 'code' and value != 'type':
+                            if request.form[value] != "" and value not in ['code','type']:
                                 columns += f"{value} = '{request.form[value]}', "
                         columns = columns[:-2]
                         query = f"UPDATE tec SET {columns} WHERE id = {request.form['code']}"
@@ -136,12 +151,39 @@ def index():#interpreta solicitações do usuário e retorna dados conforme o so
                         query = query = "SELECT * FROM tec"
             if filter == "WHERE(":
                 return redirect(url_for("index"))
-            return query_table_to_dict(query) #retorna o json
+            return render_template("table.html",result = query_table_to_dict(query)) #retorna o json
         case 'GET':             #redireciona para o login
             if not session.get('username'): 
                 return redirect(url_for("login"))
             return render_template("index.html")
-        
+
+# def query_creator(method, form):
+#     filter = "WHERE("
+#     inputs = ",("
+#     changed = False
+#     for value in form:
+#         if form[value] and value != "type":
+#             if value in ['modelo','defeito']:
+#                 filter += f" {value} LIKE %?% AND"
+#             else:
+#                 filter += f" {value} = ? AND"
+#             inputs += f" {form[value]},"
+#             changed = True
+#     if changed:
+#         filter = filter[:-3] + ")"
+#         inputs = inputs[:-1] + ")"
+#     else:
+#         filter = ""
+#         inputs = ""
+#     match method:
+#         case "list":
+#             print(inputs)
+#             cursor = g.conn.cursor()
+#             print(cursor.execute(f"""
+#         SELECT * FROM tec""")).fetchone()   
+#             return f"""
+#         'SELECT * FROM tec {filter}'{inputs}
+#         """
     
 
 

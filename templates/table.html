@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela</title>
+</head>
+
+<body>
+    <table>
+        <thead>
+            <tr>
+                {% set keys = list(result[0].keys())%}
+                {%for g in keys %}
+                <th>{{g}}</th>
+                {% endfor %}
+            </tr>
+
+        </thead>
+        <tbody>
+
+            {%for i in range (0 , len(result))%}
+                <tr>
+                {%for j in range (0 , len(keys)) %}
+                <td>{{result[i][keys[j]]}}</td>
+                {% endfor %}
+                </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</body>
+
+</html>
