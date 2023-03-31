@@ -40,18 +40,27 @@
                 case "list":
                     for (i in inputs){
                         inputs[i].disabled = false
+                        inputs[i].style.backgroundColor = "#c2f6d1"
                     }
                     break
                 case "change":
                     for(i in inputs){
                         if(inputs[i].name == "code"){
-                            inputs[i].style.backgroundColor = "red"
+                            inputs[i].style.backgroundColor = "#f5c1c1"
                         }
                         inputs[i].disabled = false
                     }
 
                 case "add":
-                
+                for(i in inputs){
+                        if(inputs[i].name in ["serial","quantidade"]){
+                            inputs[i].style.backgroundColor = "#f5c1c1"
+                        }
+                        inputs[i].disabled = false
+                        if(inputs[i].name == "code"){
+                            inputs[i].disabled = true
+                        }
+                    }
                 case "remove":
                 
                 case "new":
