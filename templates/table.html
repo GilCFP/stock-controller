@@ -14,7 +14,7 @@
             <tr>
                 {% set keys = list(result[0].keys())%}
                 {%for g in keys %}
-                <th>{{g}}</th>
+                <th style="border: 2px; border-style: solid;">{{g}}</th>
                 {% endfor %}
             </tr>
 
@@ -22,9 +22,9 @@
         <tbody>
 
             {%for i in range (0 , len(result))%}
-                <tr>
+                <tr style="border: 1.5px; border-style: solid;">
                 {%for j in range (0 , len(keys)) %}
-                <td>{{result[i][keys[j]]}}</td>
+                <td style="border: 1px; border-style: solid;">{{result[i][keys[j]]}}</td>
                 {% endfor %}
                 </tr>
             {% endfor %}

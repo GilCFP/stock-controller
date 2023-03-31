@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle</title>
 </head>
-<body>  
+
+<body>
     <form action="/index" method="POST">
-        <select name="type" autofocus>
+        <select name="type" id="tipo" autofocus onchange = mostrar_entradas()>
             <option disabled selected>Selecionar método*</option>
             <option value="list">Consultar Itens</option>
             <option value="change">Alterar Itens</option>
@@ -16,13 +18,46 @@
             <option value="remove">Remover Itens</option>
             <option value="new">Nova Categoria</option>
         </select>
-        <input type="number" name="code" id="local" placeholder = "Código de estoque">
-        <input type="text" name="serial" placeholder="Serial Number">
-        <input type="text" name="modelo" placeholder="Modelo do produto">
-        <input type="number" name="quantidade" placeholder="Quantidade">
-        <input type="text" name="defeito" placeholder="Defeito">
-        
+        <input type="number" name="code" id="local" placeholder="Código de estoque" disabled>
+        <input type="text" name="serial" placeholder="Serial Number" disabled>
+        <input type="text" name="modelo" placeholder="Modelo do produto" disabled>
+        <input type="number" name="quantidade" placeholder="Quantidade" disabled>
+        <input type="text" name="defeito" placeholder="Defeito" disabled>
+
         <button type="submit">Enviar</button>
     </form>
+    <script>
+        function mostrar_entradas(){
+            
+            let tipo = document.getElementsByTagName("option")
+            for (let i = 0; i < tipo.length; i++){
+                if (tipo[i].selected == true){
+                    var name = tipo[i].value
+                }
+            }
+            var inputs = document.getElementsByTagName("input")
+            switch(name){
+                case "list":
+                    for (i in inputs){
+                        inputs[i].disabled = false
+                    }
+                case "change":
+                    for(i in inputs){
+                        if(inputs[i].name == "code"){
+                            inputs[i].style.backgroundColor = "red"
+                        }
+                        inputs[i].disabled = false
+                    }
+
+                case "add":
+                
+                case "remove":
+                
+                case "new":
+
+            }
+        }
+    </script>
 </body>
+
 </html>
