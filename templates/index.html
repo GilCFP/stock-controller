@@ -10,7 +10,7 @@
 
 <body>
     <form action="/index" method="POST">
-        <select name="type" id="tipo" autofocus onchange = mostrar_entradas()>
+        <select name="type" id="tipo" autofocus onclick = mostrar_entradas()>
             <option disabled selected>Selecionar método*</option>
             <option value="list">Consultar Itens</option>
             <option value="change">Alterar Itens</option>
@@ -18,7 +18,7 @@
             <option value="remove">Remover Itens</option>
             <option value="new">Nova Categoria</option>
         </select>
-        <input type="number" name="code" id="local" placeholder="Código de estoque" disabled>
+        <input type="number" name="id" id="local" placeholder="Código de estoque" disabled>
         <input type="text" name="serial" placeholder="Serial Number" disabled>
         <input type="text" name="modelo" placeholder="Modelo do produto" disabled>
         <input type="number" name="quantidade" placeholder="Quantidade" disabled>
@@ -36,35 +36,45 @@
                 }
             }
             var inputs = document.getElementsByTagName("input")
+            console.log(name)
             switch(name){
                 case "list":
                     for (i in inputs){
                         inputs[i].disabled = false
                         inputs[i].style.backgroundColor = "#c2f6d1"
+                        inputs[i].style.display = "inline-block"
                     }
                     break
                 case "change":
                     for(i in inputs){
-                        if(inputs[i].name == "code"){
-                            inputs[i].style.backgroundColor = "#f5c1c1"
+                        inputs[i].style.display = "inline-block"
+                        if(inputs[i].name == "id"){
+                            inputs[i].style.backgroundColor = "#f5c1c1"                            
                         }
-                        inputs[i].disabled = false
+                        inputs[i].disabled = false            
                     }
-
+                    break
                 case "add":
-                for(i in inputs){
-                        if(inputs[i].name in ["serial","quantidade"]){
-                            inputs[i].style.backgroundColor = "#f5c1c1"
-                        }
-                        inputs[i].disabled = false
-                        if(inputs[i].name == "code"){
-                            inputs[i].disabled = true
-                        }
-                    }
                 case "remove":
-                
+                for(i in inputs){
+                    inputs[i].disabled = false
+                    inputs[i].style.display = "inline-block"
+                    if (["serial", "quantidade"].includes(inputs[i].name)){
+                        inputs[i].style.backgroundColor = "#f5c1c1"
+                    }
+                    else{
+                        inputs[i].style.display = "none"
+                    }
+                }
                 case "new":
-
+                for(i in inputs){
+                    inputs[i].disabled = false
+                    inputs[i].style.display = "inline-block"
+                    inputs[i].style.backgroundColor = "#f5c1c1"
+                    if(inputs[i].name == "id"){
+                        inputs[i].style.display = "none"                           
+                    }
+                }
             }
         }
     </script>
