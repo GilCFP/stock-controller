@@ -1,7 +1,7 @@
 from flask import Flask, request, Response, g, session, render_template, redirect, url_for
 from flask_bcrypt import Bcrypt
 import sqlite3
-#TODO consertar o novo case remove e fazer os outros cases restantes
+# TODO consertar o novo case remove e fazer os outros cases restantes
 app = Flask(__name__)
 app.secret_key = '1902oskdhjays%@#'
 bcrypt = Bcrypt(app)
@@ -130,44 +130,16 @@ def index():  # interpreta solicitações do usuário e retorna dados conforme o
             match request.form['type']:  # considera os variadas opções do usuário
                 case "list":  # apenas mostra a tabela de acordo com a solicitação
                     return render_template("table.html", result=query_creator("list", request.form))
-                    query = f" SELECT * FROM tec {filter}"
                 case "remove":  # decrementa a quantidade de um item selecionado via id
-                    return render_template("table.html", result=query_creator("list", request.form))
-                    if filter:
-                        cursor = g.conn.cursor()
-                        try:
-                            quantidade = cursor.execute(
-                                f"SELECT quantidade FROM tec WHERE serial = '{request.form['serial']}'")
-                            if quantidade.fetchone()[0] < int(request.form['quantidade']):
-                                return redirect("index")
-                        except TypeError:
-                            return redirect(url_for("index"))
-                        query = f"UPDATE tec SET quantidade = quantidade - {request.form['quantidade']} WHERE serial = '{request.form['serial']}'"
-                        altering(query, session, request.form)
-                        query = "SELECT * FROM tec"
+                    result = query_creator("list", request.form)
+                    if result:
+                        return render_template("table.html", result = result)
+                    else:
+                        return redirect(url_for("index"))
                 case "add":  # incrementa a quantidade de um item selecionado via id
-                    return render_template("table.html", result=query_creator("list", request.form))
+                    return render_template("table.html", result = query_creator("list", request.form))
                 case "new":  # adiciona um novo item à db, é necessário que sejam passados todos os parâmetros
-                    if filter:
-                        cursor = g.conn.cursor()
-                        # caso ja tenha algo registrado com esse id
-                        if cursor.execute("SELECT * FROM tec WHERE serial = ?", (request.form['serial'],)).fetchone():
-                            return redirect(url_for("index"))
-                        values = ""
-                        query = "INSERT INTO tec("
-                        for value in request.form:
-                            if request.form[value] == "" and value not in ['id', 'defeito']:
-                                return redirect(url_for("index"))
-
-                            if value not in ["type", "id"] and request.form[value]:
-                                values += f"'{request.form[value]}',"
-                                query += f"{value},"
-                        values = values[:-1]
-                        query = query[:-1] + f") VALUES({values})"
-                        print("values:", values)
-                        print("query:", query)
-                        altering(query, session, request.form)
-                        query = "SELECT * FROM tec"
+                    return render_template("table.html", result = query_creator("list", request.form))
                 # altera os valores de um item da tabela(somente altera os atributos que o usuário preencheu os campos)
                 case "change":
                     if filter:
@@ -221,31 +193,49 @@ def query_creator(method, form):
             return table_to_dict(cursor.fetchall())
         case "add":
             query = f"UPDATE tec SET quantidade = quantidade + ? WHERE serial = ?"
-            cursor.execute(query,(form['quantidade'],form['serial']))
-            g.conn.commit()            
+            cursor.execute(query, (form['quantidade'], form['serial']))
+            g.conn.commit()
             return table_to_dict(cursor.execute(default).fetchall())
         case "remove":
-            try:
-                quantidade = cursor.execute(
-                    f"SELECT quantidade FROM tec WHERE serial = ?",({request.form['serial']},))
-                if quantidade.fetchone()[0] < int(request.form['quantidade']):
-                    return redirect(url_for("index"))
-            except TypeError:
-                return redirect(url_for("index"))
+            quantidade = cursor.execute("SELECT quantidade FROM tec WHERE serial = ?", (form['serial'],)).fetchone()[0]
+            print(quantidade,"quantidade", int(form['quantidade']))
+            if quantidade < int(form['quantidade']):
+                return False
+            if quantidade == int(form['quantidade']):
+                cursor.execute("DELETE FROM tec WHERE serial = ?",(form["serial"],))
+                g.conn.commit()
+                print(table_to_dict(cursor.execute(default).fetchall()))
+                return table_to_dict(cursor.execute(default).fetchall())
+            print("continuou!!!!!!!!!!!!!!!!!!")
             query = f"UPDATE tec SET quantidade = quantidade - ? WHERE serial = ?"
-            cursor.execute(query,(form['quantidade'],form["serial"]))
-            g.conn.commit()           
+            cursor.execute(query,(form['quantidade'], form["serial"]))
+            g.conn.commit()
+            print(table_to_dict(cursor.execute(default).fetchall()))
             return table_to_dict(cursor.execute(default).fetchall())
         case "new":
-            return
-            
-            
+            if cursor.execute("SELECT * FROM tec WHERE serial = ?", (request.form['serial'],)).fetchone():
+                return redirect(url_for("index"))
+            query = "INSERT INTO tec("
+            values = "VALUES ("
+            for value in form:
+                if value not in ["type", "id"] and form[value]:
+                    values+= "?,"
+                    query += f"{value},"
+            query = query[:-1] + f")"
+            values = values[:-1] + ")"
+            for i in range(0,len(inputs)):
+                inputs[i] = inputs[i].replace("%","")
+            cursor.execute(query + values,inputs)
+            g.conn.commit()
+            return table_to_dict(cursor.execute(default))
+
 def table_to_dict(table):
     stock_dict = [{'id': row[0], 'serial': row[1], 'modelo':row[2], 'quantidade':row[3], 'defeito':row[4]}
                   for row in table]
     return stock_dict
 
-#adicionar e alterar
+
+# adicionar e alterar
 if __name__ == '__main__':
     app.debug = True
     app.run(port=5000)

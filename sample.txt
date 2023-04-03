@@ -1,4 +1,6 @@
-CREATE TRIGGER set_time AFTER INSERT ON history
-BEGIN
-    UPDATE history SET time = datetime('now', '-3 hours') WHERE rowid = NEW.rowid;
-END;
+CREATE TABLE tec(
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        serial TEXT,
+        modelo TEXT NOT NULL,
+        quantidade INTEGER DEFAULT 0,
+        defeito TEXT DEFALT 'Não especificado');
