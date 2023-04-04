@@ -1,7 +1,8 @@
 from flask import Flask, request, Response, g, session, render_template, redirect, url_for
 from flask_bcrypt import Bcrypt
 import sqlite3
-# TODO consertar o novo case remove e fazer os outros cases restantes
+# TODO JAVASCRIPT fazer com que enquanto os vermelhos estiverem vazios n tenha como apertar enviar. DICA:
+# selecionar todas as inputs e filtrar só pelas que tem a background color vermelha
 app = Flask(__name__)
 app.secret_key = '1902oskdhjays%@#'
 bcrypt = Bcrypt(app)
@@ -134,14 +135,20 @@ def index():  # interpreta solicitações do usuário e retorna dados conforme o
                     result = query_creator("list", request.form)
                     if result:
                         return render_template("table.html", result = result)
-                    else:
-                        return redirect(url_for("index"))
+                    return redirect(url_for("index"))
                 case "add":  # incrementa a quantidade de um item selecionado via id
                     return render_template("table.html", result = query_creator("list", request.form))
                 case "new":  # adiciona um novo item à db, é necessário que sejam passados todos os parâmetros
-                    return render_template("table.html", result = query_creator("list", request.form))
+                    result = query_creator("list", request.form)
+                    if result:
+                        return render_template("table.html", result = result)
+                    return redirect(url_for("index"))
                 # altera os valores de um item da tabela(somente altera os atributos que o usuário preencheu os campos)
                 case "change":
+                    result = query_creator("list", request.form)
+                    if result:
+                        return render_template("table.html", result = result)
+                    return redirect(url_for("index"))
                     if filter:
                         columns = ""
                         for value in request.form:
@@ -204,17 +211,15 @@ def query_creator(method, form):
             if quantidade == int(form['quantidade']):
                 cursor.execute("DELETE FROM tec WHERE serial = ?",(form["serial"],))
                 g.conn.commit()
-                print(table_to_dict(cursor.execute(default).fetchall()))
                 return table_to_dict(cursor.execute(default).fetchall())
-            print("continuou!!!!!!!!!!!!!!!!!!")
             query = f"UPDATE tec SET quantidade = quantidade - ? WHERE serial = ?"
             cursor.execute(query,(form['quantidade'], form["serial"]))
             g.conn.commit()
-            print(table_to_dict(cursor.execute(default).fetchall()))
             return table_to_dict(cursor.execute(default).fetchall())
         case "new":
-            if cursor.execute("SELECT * FROM tec WHERE serial = ?", (request.form['serial'],)).fetchone():
-                return redirect(url_for("index"))
+            print("cursor: ", cursor.execute("SELECT * FROM tec WHERE serial = ?", (form['serial'],)).fetchone())
+            if cursor.execute("SELECT * FROM tec WHERE serial = ?", (form['serial'],)).fetchone():
+                return False
             query = "INSERT INTO tec("
             values = "VALUES ("
             for value in form:
@@ -226,6 +231,19 @@ def query_creator(method, form):
             for i in range(0,len(inputs)):
                 inputs[i] = inputs[i].replace("%","")
             cursor.execute(query + values,inputs)
+            g.conn.commit()
+            return table_to_dict(cursor.execute(default))
+        case "change":
+            columns = ""
+            for value in form:
+                if value == 'id' and form[value] == "":
+                    return False
+                if request.form[value] != "" and value not in ['id', 'type']:
+                    columns += f"{value} = ?, "
+            columns = columns[:-2]
+            query = f"UPDATE tec SET {columns} WHERE id = '?'"
+            inputs = inputs.append(form["id"])
+            print(cursor.execute(query, tuple(inputs)))
             g.conn.commit()
             return table_to_dict(cursor.execute(default))
 
