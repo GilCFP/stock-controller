@@ -1,10 +1,12 @@
 from flask import Flask, request, Response, g, session, render_template, redirect, url_for
 from flask_bcrypt import Bcrypt
+from datetime import timedelta
 import sqlite3
 # TODO JAVASCRIPT fazer com que enquanto os vermelhos estiverem vazios n tenha como apertar enviar. DICA:
 # selecionar todas as inputs e filtrar só pelas que tem a background color vermelha
 app = Flask(__name__)
 app.secret_key = '1902oskdhjays%@#'
+app.permanent_session_lifetime = timedelta(seconds=180)
 bcrypt = Bcrypt(app)
 DB_URL = "estoque.db"
 app.jinja_env.globals.update(len=len, list=list)
@@ -47,6 +49,7 @@ def log_user(session_data):
 
 
 def login_check():
+    print("username:", session.get('username'))
     if not session.get('username'):
         return False
     return True
